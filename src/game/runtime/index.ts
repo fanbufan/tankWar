@@ -639,9 +639,7 @@ function handleBulletTerrainCollision(runtime: Runtime, bullet: RuntimeBullet, e
 function applyBrickDamage(runtime: Runtime, tile: GridPoint, bullet: RuntimeBullet): void {
   const damage = getOrCreateTerrainDamage(runtime, tile, "brick");
   const currentMask = damage.brickMask ?? FULL_BRICK_MASK;
-  const damageMask = bullet.owner === "player" && playerFirepower(bullet.power).destroysSteel
-    ? brickSideMask(bullet.direction)
-    : brickQuadrantMask(tile, bullet);
+  const damageMask = brickImpactMask(tile, bullet);
   const nextMask = currentMask & ~damageMask;
 
   if (nextMask === 0) {
@@ -656,7 +654,7 @@ function isBrickSubBlockOccupied(runtime: Runtime, tile: GridPoint, bullet: Runt
   const damage = runtime.terrainDamage.find((candidate) => candidate.kind === "brick" && sameTile(candidate.tile, tile));
   const currentMask = damage?.brickMask ?? FULL_BRICK_MASK;
 
-  return (currentMask & brickQuadrantMask(tile, bullet)) !== 0;
+  return (currentMask & brickImpactMask(tile, bullet)) !== 0;
 }
 
 function applySteelDamage(runtime: Runtime, tile: GridPoint, direction: Direction): void {
@@ -674,41 +672,17 @@ function applySteelDamage(runtime: Runtime, tile: GridPoint, direction: Directio
   damage.steelHits = steelHits;
 }
 
-function brickQuadrantMask(tile: GridPoint, bullet: RuntimeBullet): number {
+function brickImpactMask(tile: GridPoint, bullet: RuntimeBullet): number {
   const localX = bullet.position.x - tile.x * CONFIG.tileSize;
   const localY = bullet.position.y - tile.y * CONFIG.tileSize;
   const left = localX < CONFIG.tileSize / 2;
   const top = localY < CONFIG.tileSize / 2;
 
-  if (bullet.direction === "up") {
-    return left ? 0b0100 : 0b1000;
+  if (bullet.direction === "up" || bullet.direction === "down") {
+    return top ? 0b0011 : 0b1100;
   }
 
-  if (bullet.direction === "down") {
-    return left ? 0b0001 : 0b0010;
-  }
-
-  if (bullet.direction === "left") {
-    return top ? 0b0010 : 0b1000;
-  }
-
-  return top ? 0b0001 : 0b0100;
-}
-
-function brickSideMask(direction: Direction): number {
-  if (direction === "up") {
-    return 0b1100;
-  }
-
-  if (direction === "down") {
-    return 0b0011;
-  }
-
-  if (direction === "left") {
-    return 0b1010;
-  }
-
-  return 0b0101;
+  return left ? 0b0101 : 0b1010;
 }
 
 function impactSide(direction: Direction): TerrainDamageSide {
@@ -731,13 +705,19 @@ function handleBulletTankCollision(runtime: Runtime, bullet: RuntimeBullet, even
   if (bullet.owner === "player") {
     const enemy = runtime.enemies.find((candidate) => rectsOverlap(centeredRect(candidate.position, CONFIG.tankSize), centeredRect(bullet.position, CONFIG.bulletSize)));
 
-    if (!enemy || enemy.invulnerableUntil > runtime.elapsedMs) {
+    if (!enemy) {
       return false;
     }
 
     if (enemy.carriesPowerUp) {
       enemy.carriesPowerUp = false;
       spawnCarrierPowerUp(runtime);
+    }
+
+    if (enemy.invulnerableUntil > runtime.elapsedMs) {
+      addExplosion(runtime, bullet.position, events);
+      events.push({ type: "hit", owner: "player", position: { ...enemy.position } });
+      return true;
     }
 
     enemy.armor -= 1;

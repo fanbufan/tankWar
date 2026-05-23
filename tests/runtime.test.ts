@@ -356,6 +356,62 @@ describe("runtime FC flashing enemy power ups", () => {
     expect("carriesPowerUp" in snapshot.enemies[0] && Boolean(snapshot.enemies[0].carriesPowerUp)).toBe(false);
   });
 
+  it("spawns a power up when a carrying one-hit enemy is destroyed", () => {
+    const runtime = createRuntime(0, 0, {
+      suppressInitialEnemies: true,
+      disableEnemySpawns: true,
+      playerTile: { x: 3, y: 12 },
+      playerDirection: "up",
+      initialEnemies: [
+        {
+          type: "normal",
+          tile: { x: 3, y: 10 },
+          direction: "down",
+          invulnerableUntil: 0,
+          cooldownUntil: 99999,
+          spawningUntil: 0,
+          carriesPowerUp: true,
+        },
+      ],
+    });
+
+    stepRuntime(runtime, { ...idleInput, fire: true }, 16);
+    runRuntime(runtime, idleInput, 520);
+
+    const snapshot = getRuntimeSnapshot(runtime);
+    expect(snapshot.enemies).toHaveLength(0);
+    expect(snapshot.powerUps).toHaveLength(1);
+  });
+
+  it("spawns a power up when a carrying enemy is hit during its spawn shield", () => {
+    const runtime = createRuntime(0, 0, {
+      suppressInitialEnemies: true,
+      disableEnemySpawns: true,
+      playerTile: { x: 3, y: 12 },
+      playerDirection: "up",
+      initialEnemies: [
+        {
+          type: "normal",
+          tile: { x: 3, y: 10 },
+          direction: "down",
+          invulnerableUntil: 99999,
+          cooldownUntil: 99999,
+          spawningUntil: 99999,
+          carriesPowerUp: true,
+        },
+      ],
+    });
+
+    stepRuntime(runtime, { ...idleInput, fire: true }, 16);
+    runRuntime(runtime, idleInput, 520);
+
+    const snapshot = getRuntimeSnapshot(runtime);
+    expect(snapshot.enemies).toHaveLength(1);
+    expect(snapshot.enemies[0].armor).toBe(1);
+    expect(snapshot.enemies[0].carriesPowerUp).toBe(false);
+    expect(snapshot.powerUps).toHaveLength(1);
+  });
+
   it("clears an existing power up when the eleventh carrying enemy spawns", () => {
     const runtime = createRuntime(0, 0, { suppressInitialEnemies: true });
 
@@ -442,6 +498,12 @@ describe("runtime combat", () => {
     expect(brickDamage?.kind).toBe("brick");
     expect(brickDamage?.brickMask).not.toBe(0b1111);
     expect(brickDamage?.brickMask).not.toBe(0);
+
+    runRuntime(brickRuntime, idleInput, CONFIG.playerFireCooldownMs + 16);
+    stepRuntime(brickRuntime, { ...idleInput, fire: true }, 16);
+    runRuntime(brickRuntime, idleInput, 220);
+
+    expect(getRuntimeSnapshot(brickRuntime).grid[2][2]).toBe("empty");
 
     const baseRuntime = createRuntime(0, 0, {
       suppressInitialEnemies: true,

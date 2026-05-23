@@ -271,7 +271,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (tile === "brick" && damage?.kind === "brick" && damage.brickMask !== undefined && damage.brickMask !== 0b1111) {
-      this.drawBrickFragments(x, y, damage.brickMask);
+      this.drawDamagedBrick(x, y, damage.brickMask);
       return;
     }
 
@@ -284,7 +284,15 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  private drawBrickFragments(x: number, y: number, mask: number): void {
+  private drawDamagedBrick(x: number, y: number, mask: number): void {
+    const center = tileToCenter({ x, y });
+    this.spriteLayer.add(
+      this.add
+        .image(center.x, center.y, SPRITE_SHEETS.terrain.key, SPRITE_FRAMES.terrain.brick)
+        .setOrigin(0.5)
+        .setDepth(1),
+    );
+
     const originX = x * CONFIG.tileSize;
     const originY = y * CONFIG.tileSize;
     const half = CONFIG.tileSize / 2;
@@ -296,15 +304,16 @@ export class GameScene extends Phaser.Scene {
     ];
 
     for (const fragment of fragments) {
-      if ((mask & fragment.bit) === 0) {
+      if ((mask & fragment.bit) !== 0) {
         continue;
       }
 
-      this.graphics.fillStyle(0xb45f2a, 1);
-      this.graphics.fillRect(fragment.x, fragment.y, half, half);
-      this.graphics.fillStyle(0x5a2a16, 1);
-      this.graphics.fillRect(fragment.x, fragment.y + half - 3, half, 3);
-      this.graphics.fillRect(fragment.x + half - 3, fragment.y, 3, half);
+      this.spriteLayer.add(
+        this.add
+          .rectangle(fragment.x + half / 2, fragment.y + half / 2, half, half, NES_COLORS.black)
+          .setOrigin(0.5)
+          .setDepth(2),
+      );
     }
   }
 
