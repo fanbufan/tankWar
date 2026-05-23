@@ -3,6 +3,7 @@ import type { PixelPoint } from "../geometry";
 
 export type RuntimeInput = InputState;
 export type RuntimeStatus = "playing" | "paused" | "level-complete" | "victory" | "defeat";
+export type TerrainDamageSide = "top" | "right" | "bottom" | "left";
 export type RuntimeEventType =
   | "shot"
   | "hit"
@@ -31,6 +32,8 @@ export interface RuntimeTankSnapshot {
   lives: number;
   powerLevel: number;
   invulnerableUntil: number;
+  carriesPowerUp: boolean;
+  spawningUntil: number;
   spawnPointIndex?: number;
 }
 
@@ -62,6 +65,21 @@ export interface RuntimeHudSnapshot {
   item?: PowerUpType;
 }
 
+export interface RuntimeTerrainDamageSnapshot {
+  tile: GridPoint;
+  kind: "brick" | "steel";
+  brickMask?: number;
+  steelHits?: Partial<Record<TerrainDamageSide, number>>;
+}
+
+export interface RuntimeStageStatsSnapshot {
+  destroyedEnemies: Record<EnemyType, number>;
+  enemyScore: Record<EnemyType, number>;
+  powerUpScore: number;
+  bonusLives: number;
+  totalScore: number;
+}
+
 export interface RuntimeSnapshot {
   elapsedMs: number;
   levelIndex: number;
@@ -73,6 +91,8 @@ export interface RuntimeSnapshot {
   bullets: RuntimeBulletSnapshot[];
   powerUps: RuntimePowerUpSnapshot[];
   explosions: RuntimeExplosionSnapshot[];
+  terrainDamage: RuntimeTerrainDamageSnapshot[];
+  stageStats: RuntimeStageStatsSnapshot;
   hud: RuntimeHudSnapshot;
   baseFortifiedUntil: number;
   enemyFrozenUntil: number;
@@ -85,6 +105,8 @@ export interface RuntimeInitialEnemy {
   cooldownUntil?: number;
   decisionAt?: number;
   invulnerableUntil?: number;
+  carriesPowerUp?: boolean;
+  spawningUntil?: number;
 }
 
 export interface RuntimeOptions {

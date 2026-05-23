@@ -29,6 +29,8 @@ describe("game simulation", () => {
     const state = createGameState(0);
 
     applyPowerUp(state, "star");
+    applyPowerUp(state, "star");
+    applyPowerUp(state, "star");
     applyPowerUp(state, "helmet");
     applyPowerUp(state, "shovel");
     applyPowerUp(state, "tank");
@@ -36,7 +38,7 @@ describe("game simulation", () => {
     applyPowerUp(state, "clock");
     applyPowerUp(state, "bomb");
 
-    expect(state.player.powerLevel).toBe(2);
+    expect(state.player.powerLevel).toBe(CONFIG.maxPlayerPowerLevel);
     expect(state.player.invulnerableUntil).toBeGreaterThan(state.elapsedMs);
     expect(state.baseFortifiedUntil).toBeGreaterThan(state.elapsedMs);
     expect(state.player.lives).toBe(CONFIG.playerLives + 1);
@@ -44,4 +46,3 @@ describe("game simulation", () => {
     expect(state.enemies).toHaveLength(0);
   });
 });
-

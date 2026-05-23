@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { SPRITE_FRAMES, SPRITE_SHEETS } from "../assets/spriteManifest";
+import { SPRITE_FRAMES, SPRITE_SHEETS, type PlayerPowerLevel } from "../assets/spriteManifest";
 import { CONFIG, GAME_HEIGHT, GAME_WIDTH } from "../config";
 import { tileToCenter } from "../geometry";
 import { reduceKeysToActions } from "../input";
@@ -10,6 +10,7 @@ import type {
   RuntimePowerUpSnapshot,
   RuntimeSnapshot,
   RuntimeTankSnapshot,
+  RuntimeTerrainDamageSnapshot,
 } from "../runtime/types";
 import type { EnemyType, GridPoint, PowerUpType, TileType } from "../types";
 
@@ -28,6 +29,17 @@ interface HudTexts {
   help: Phaser.GameObjects.Text;
 }
 
+const PLAYFIELD_WIDTH = CONFIG.gridColumns * CONFIG.tileSize;
+const NES_COLORS = {
+  black: 0x000000,
+  hudGray: 0x7b7b7b,
+  hudDark: 0x111111,
+  hudLight: 0xd9d9d9,
+  white: 0xfcfcfc,
+  red: 0xd82800,
+  yellow: 0xf8d878,
+} as const;
+
 const POWER_UP_COLORS: Record<PowerUpType, number> = {
   star: 0xffdf5d,
   bomb: 0xff6b6b,
@@ -35,15 +47,6 @@ const POWER_UP_COLORS: Record<PowerUpType, number> = {
   shovel: 0xc08457,
   helmet: 0x94f0a9,
   tank: 0xf8fafc,
-};
-
-const POWER_UP_LABELS: Record<PowerUpType, string> = {
-  star: "STAR",
-  bomb: "BOMB",
-  clock: "TIME",
-  shovel: "BASE",
-  helmet: "SAFE",
-  tank: "LIFE",
 };
 
 const tanksUrl = new URL("../../assets/sprites/tanks.png", import.meta.url).href;
@@ -97,12 +100,10 @@ export class GameScene extends Phaser.Scene {
     this.graphics = this.add.graphics();
     this.spriteLayer = this.add.container(0, 0).setDepth(2);
     this.hud = this.createHudTexts();
-    this.pauseText = this.add.text(CONFIG.gridColumns * CONFIG.tileSize / 2, GAME_HEIGHT / 2, "PAUSED", {
+    this.pauseText = this.add.text(PLAYFIELD_WIDTH / 2, GAME_HEIGHT / 2, "PAUSE", {
       fontFamily: '"Courier New", monospace',
-      fontSize: "34px",
-      color: "#f8fafc",
-      stroke: "#0a0f14",
-      strokeThickness: 8,
+      fontSize: "22px",
+      color: "#fcfcfc",
     }).setOrigin(0.5).setDepth(20).setVisible(false);
 
     this.input.keyboard?.on("keydown", this.handleKeyDown, this);
@@ -129,21 +130,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createHudTexts(): HudTexts {
-    const panelX = CONFIG.gridColumns * CONFIG.tileSize + 16;
+    const panelX = PLAYFIELD_WIDTH;
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontFamily: '"Courier New", monospace',
-      fontSize: "15px",
-      color: "#d7e2ea",
+      fontSize: "16px",
+      color: "#111111",
     };
 
     return {
-      stage: this.add.text(panelX, 24, "", { ...textStyle, color: "#6bd5ff" }).setDepth(10),
-      lives: this.add.text(panelX, 66, "", textStyle).setDepth(10),
-      enemies: this.add.text(panelX, 108, "", textStyle).setDepth(10),
-      score: this.add.text(panelX, 150, "", textStyle).setDepth(10),
-      power: this.add.text(panelX, 192, "", textStyle).setDepth(10),
-      item: this.add.text(panelX, 236, "", { ...textStyle, color: "#f5c451" }).setDepth(10),
-      help: this.add.text(panelX, 332, "P/ESC\n暂停", { ...textStyle, fontSize: "13px", color: "#93a4b5" }).setDepth(10),
+      stage: this.add.text(panelX + 54, 326, "", textStyle).setOrigin(0.5, 0).setDepth(10),
+      lives: this.add.text(panelX + 54, 252, "", textStyle).setOrigin(0.5, 0).setDepth(10),
+      enemies: this.add.text(panelX, 0, "", textStyle).setVisible(false).setDepth(10),
+      score: this.add.text(panelX + 10, 386, "", { ...textStyle, fontSize: "10px" }).setDepth(10),
+      power: this.add.text(panelX, 0, "", textStyle).setVisible(false).setDepth(10),
+      item: this.add.text(panelX, 0, "", textStyle).setVisible(false).setDepth(10),
+      help: this.add.text(panelX + 22, 218, "1P", textStyle).setDepth(10),
     };
   }
 
@@ -196,6 +197,7 @@ export class GameScene extends Phaser.Scene {
       outcome: snapshot.status,
       levelIndex: snapshot.levelIndex,
       score: snapshot.hud.score,
+      stageStats: snapshot.stageStats,
     });
   }
 
@@ -214,30 +216,21 @@ export class GameScene extends Phaser.Scene {
     this.drawBullets(snapshot.bullets);
     this.drawExplosions(snapshot.explosions, snapshot.elapsedMs);
     this.drawTiles(snapshot, true);
-    this.drawHudPanel();
+    this.drawHudPanel(snapshot);
     this.updateHudText(snapshot);
     this.pauseText.setVisible(snapshot.status === "paused");
 
     if (snapshot.status === "paused") {
-      this.graphics.fillStyle(0x05080c, 0.68);
-      this.graphics.fillRect(0, 0, CONFIG.gridColumns * CONFIG.tileSize, GAME_HEIGHT);
+      this.graphics.fillStyle(NES_COLORS.black, 0.72);
+      this.graphics.fillRect(0, 0, PLAYFIELD_WIDTH, GAME_HEIGHT);
     }
   }
 
   private drawBackdrop(): void {
-    this.graphics.fillStyle(0x0b0f14, 1);
+    this.graphics.fillStyle(NES_COLORS.hudGray, 1);
     this.graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    this.graphics.fillStyle(0x111820, 1);
-    this.graphics.fillRect(0, 0, CONFIG.gridColumns * CONFIG.tileSize, GAME_HEIGHT);
-    this.graphics.lineStyle(1, 0x1c2a35, 0.55);
-
-    for (let x = 0; x <= CONFIG.gridColumns; x += 1) {
-      this.graphics.lineBetween(x * CONFIG.tileSize, 0, x * CONFIG.tileSize, GAME_HEIGHT);
-    }
-
-    for (let y = 0; y <= CONFIG.gridRows; y += 1) {
-      this.graphics.lineBetween(0, y * CONFIG.tileSize, CONFIG.gridColumns * CONFIG.tileSize, y * CONFIG.tileSize);
-    }
+    this.graphics.fillStyle(NES_COLORS.black, 1);
+    this.graphics.fillRect(0, 0, PLAYFIELD_WIDTH, GAME_HEIGHT);
   }
 
   private drawTiles(snapshot: RuntimeSnapshot, grassPass: boolean): void {
@@ -249,7 +242,7 @@ export class GameScene extends Phaser.Scene {
           continue;
         }
 
-        this.drawTile(tile, x, y);
+        this.drawTile(tile, x, y, snapshot.terrainDamage.find((damage) => damage.tile.x === x && damage.tile.y === y));
       }
     }
   }
@@ -272,7 +265,16 @@ export class GameScene extends Phaser.Scene {
     ].some((guard) => guard.x === tile.x && guard.y === tile.y);
   }
 
-  private drawTile(tile: TileType, x: number, y: number): void {
+  private drawTile(tile: TileType, x: number, y: number, damage?: RuntimeTerrainDamageSnapshot): void {
+    if (tile === "empty") {
+      return;
+    }
+
+    if (tile === "brick" && damage?.kind === "brick" && damage.brickMask !== undefined && damage.brickMask !== 0b1111) {
+      this.drawBrickFragments(x, y, damage.brickMask);
+      return;
+    }
+
     const center = tileToCenter({ x, y });
     this.spriteLayer.add(
       this.add
@@ -282,26 +284,56 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  private drawBrickFragments(x: number, y: number, mask: number): void {
+    const originX = x * CONFIG.tileSize;
+    const originY = y * CONFIG.tileSize;
+    const half = CONFIG.tileSize / 2;
+    const fragments = [
+      { bit: 0b0001, x: originX, y: originY },
+      { bit: 0b0010, x: originX + half, y: originY },
+      { bit: 0b0100, x: originX, y: originY + half },
+      { bit: 0b1000, x: originX + half, y: originY + half },
+    ];
+
+    for (const fragment of fragments) {
+      if ((mask & fragment.bit) === 0) {
+        continue;
+      }
+
+      this.graphics.fillStyle(0xb45f2a, 1);
+      this.graphics.fillRect(fragment.x, fragment.y, half, half);
+      this.graphics.fillStyle(0x5a2a16, 1);
+      this.graphics.fillRect(fragment.x, fragment.y + half - 3, half, 3);
+      this.graphics.fillRect(fragment.x + half - 3, fragment.y, 3, half);
+    }
+  }
+
   private drawTank(tank: RuntimeTankSnapshot, elapsedMs: number): void {
-    const frame = SPRITE_FRAMES.tanks[tank.type as "player" | EnemyType][tank.direction];
-    const blink = tank.invulnerableUntil > elapsedMs && Math.floor(elapsedMs / 120) % 2 === 0;
+    const frame =
+      tank.owner === "player"
+        ? SPRITE_FRAMES.tanks.player[this.playerPowerFrame(tank.powerLevel)][tank.direction]
+        : SPRITE_FRAMES.tanks[tank.type as EnemyType][tank.direction];
+    const blinkFrame = Math.floor(elapsedMs / 120) % 2 === 0;
+    const invulnerableBlink = tank.invulnerableUntil > elapsedMs && blinkFrame;
+    const powerUpBlink = tank.owner === "enemy" && tank.carriesPowerUp && blinkFrame;
+    const spawningBlink = tank.owner === "enemy" && tank.spawningUntil > elapsedMs && blinkFrame;
     const sprite = this.add.image(tank.position.x, tank.position.y, SPRITE_SHEETS.tanks.key, frame).setOrigin(0.5).setDepth(4);
 
-    if (blink) {
-      sprite.setAlpha(0.7);
-      this.graphics.lineStyle(2, 0xf8fafc, 1);
-      this.graphics.strokeRect(tank.position.x - 15, tank.position.y - 15, 30, 30);
+    if (powerUpBlink) {
+      sprite.setTint(0xf5c451);
+    }
+
+    if (spawningBlink) {
+      sprite.setAlpha(0.38);
+    } else if (invulnerableBlink) {
+      sprite.setAlpha(0.42);
     }
 
     this.spriteLayer.add(sprite);
+  }
 
-    if (tank.owner === "enemy" && tank.type === "armor") {
-      this.graphics.fillStyle(0xf8fafc, 1);
-
-      for (let index = 0; index < tank.armor; index += 1) {
-        this.graphics.fillRect(tank.position.x - 11 + index * 6, tank.position.y - 18, 4, 3);
-      }
-    }
+  private playerPowerFrame(powerLevel: number): PlayerPowerLevel {
+    return Math.min(Math.max(Math.trunc(powerLevel), 1), CONFIG.maxPlayerPowerLevel) as PlayerPowerLevel;
   }
 
   private drawBullets(bullets: RuntimeBulletSnapshot[]): void {
@@ -310,7 +342,7 @@ export class GameScene extends Phaser.Scene {
         .image(bullet.position.x, bullet.position.y, SPRITE_SHEETS.effects.key, SPRITE_FRAMES.effects.bullet)
         .setOrigin(0.5)
         .setDepth(5);
-      sprite.setTint(bullet.owner === "player" ? 0xf8fafc : 0xff6b6b);
+      sprite.setTint(NES_COLORS.white);
       this.spriteLayer.add(sprite);
     }
   }
@@ -319,8 +351,6 @@ export class GameScene extends Phaser.Scene {
     for (const powerUp of powerUps) {
       const center = tileToCenter(powerUp.tile);
       const pulse = Math.floor(elapsedMs / 180) % 2 === 0 ? 1 : 0.72;
-      this.graphics.lineStyle(2, 0xf8fafc, 0.8);
-      this.graphics.strokeRect(center.x - 11, center.y - 11, 22, 22);
       const sprite = this.add
         .image(center.x, center.y, SPRITE_SHEETS.powerups.key, SPRITE_FRAMES.powerups[powerUp.type])
         .setOrigin(0.5)
@@ -348,22 +378,45 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private drawHudPanel(): void {
-    const panelX = CONFIG.gridColumns * CONFIG.tileSize;
-    this.graphics.fillStyle(0x202833, 1);
+  private drawHudPanel(snapshot: RuntimeSnapshot): void {
+    const panelX = PLAYFIELD_WIDTH;
+    this.graphics.fillStyle(NES_COLORS.hudGray, 1);
     this.graphics.fillRect(panelX, 0, CONFIG.sidePanelWidth, GAME_HEIGHT);
-    this.graphics.lineStyle(2, 0x3a4652, 1);
+    this.graphics.lineStyle(2, NES_COLORS.hudDark, 1);
     this.graphics.lineBetween(panelX, 0, panelX, GAME_HEIGHT);
-    this.graphics.fillStyle(0x121922, 1);
-    this.graphics.fillRect(panelX + 12, 14, CONFIG.sidePanelWidth - 24, GAME_HEIGHT - 28);
+    this.drawRemainingEnemyIcons(panelX, snapshot.hud.enemies);
+    this.drawMiniTank(panelX + 26, 250, NES_COLORS.hudDark);
+    this.drawFlag(panelX + 25, 318);
+  }
+
+  private drawRemainingEnemyIcons(panelX: number, remaining: number): void {
+    for (let index = 0; index < remaining; index += 1) {
+      const x = panelX + 22 + (index % 2) * 24;
+      const y = 20 + Math.floor(index / 2) * 16;
+      this.drawMiniTank(x, y, NES_COLORS.hudDark);
+    }
+  }
+
+  private drawMiniTank(x: number, y: number, color: number): void {
+    this.graphics.fillStyle(color, 1);
+    this.graphics.fillRect(x - 7, y - 6, 4, 12);
+    this.graphics.fillRect(x + 3, y - 6, 4, 12);
+    this.graphics.fillRect(x - 4, y - 4, 8, 8);
+    this.graphics.fillRect(x - 1, y - 9, 2, 5);
+    this.graphics.fillRect(x - 2, y - 2, 4, 4);
+  }
+
+  private drawFlag(x: number, y: number): void {
+    this.graphics.fillStyle(NES_COLORS.hudDark, 1);
+    this.graphics.fillRect(x - 5, y - 11, 3, 24);
+    this.graphics.fillRect(x - 2, y - 11, 18, 12);
+    this.graphics.fillStyle(NES_COLORS.hudLight, 1);
+    this.graphics.fillRect(x + 2, y - 8, 8, 6);
   }
 
   private updateHudText(snapshot: RuntimeSnapshot): void {
-    this.hud.stage.setText(`STAGE\n${snapshot.hud.stageLabel}`);
-    this.hud.lives.setText(`LIVES\n${snapshot.hud.lives}`);
-    this.hud.enemies.setText(`ENEMY\n${snapshot.hud.enemies}`);
-    this.hud.score.setText(`SCORE\n${snapshot.hud.score}`);
-    this.hud.power.setText(`POWER\n${snapshot.hud.power}`);
-    this.hud.item.setText(`ITEM\n${snapshot.hud.item ? POWER_UP_LABELS[snapshot.hud.item] : "--"}`);
+    this.hud.stage.setText(`${snapshot.levelIndex + 1}`);
+    this.hud.lives.setText(`${snapshot.hud.lives}`);
+    this.hud.score.setText(`${snapshot.hud.score.toString().padStart(6, "0")}`);
   }
 }

@@ -35,7 +35,9 @@ export function parseLevel(level: LevelDefinition): ParsedLevel {
     return Array.from(row, tileFromSymbol);
   });
 
-  grid[level.base.y][level.base.x] = "base";
+  clearTankSpawns(grid, level);
+  normalizeSpawnSafety(grid, level);
+  normalizeBaseGuard(grid, level);
 
   return {
     ...level,
@@ -45,4 +47,60 @@ export function parseLevel(level: LevelDefinition): ParsedLevel {
     base: { ...level.base },
     grid,
   };
+}
+
+function clearTankSpawns(grid: TileType[][], level: LevelDefinition): void {
+  for (const point of [level.playerSpawn, ...level.enemySpawnPoints]) {
+    grid[point.y][point.x] = "empty";
+  }
+
+  for (const point of level.enemySpawnPoints) {
+    for (let y = point.y; y <= point.y + 1 && y < CONFIG.gridRows; y += 1) {
+      for (let x = Math.max(0, point.x - 1); x <= Math.min(CONFIG.gridColumns - 1, point.x + 1); x += 1) {
+        grid[y][x] = "empty";
+      }
+    }
+  }
+}
+
+function normalizeSpawnSafety(grid: TileType[][], level: LevelDefinition): void {
+  for (const point of level.enemySpawnPoints) {
+    if (point.x !== level.base.x) {
+      continue;
+    }
+
+    const safetyTile = { x: point.x, y: point.y + 2 };
+
+    if (safetyTile.y < CONFIG.gridRows) {
+      grid[safetyTile.y][safetyTile.x] = "steel";
+    }
+  }
+}
+
+function normalizeBaseGuard(grid: TileType[][], level: LevelDefinition): void {
+  const { x, y } = level.base;
+
+  for (let yy = y - 1; yy <= y; yy += 1) {
+    for (let xx = x - 2; xx <= x + 2; xx += 1) {
+      if (yy >= 0 && yy < CONFIG.gridRows && xx >= 0 && xx < CONFIG.gridColumns) {
+        grid[yy][xx] = "empty";
+      }
+    }
+  }
+
+  for (const guard of baseGuardTiles(level.base)) {
+    grid[guard.y][guard.x] = "brick";
+  }
+
+  grid[y][x] = "base";
+}
+
+function baseGuardTiles(base: { x: number; y: number }): Array<{ x: number; y: number }> {
+  return [
+    { x: base.x - 1, y: base.y },
+    { x: base.x + 1, y: base.y },
+    { x: base.x - 1, y: base.y - 1 },
+    { x: base.x, y: base.y - 1 },
+    { x: base.x + 1, y: base.y - 1 },
+  ];
 }

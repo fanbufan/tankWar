@@ -7,34 +7,42 @@ mkdirSync(outDir, { recursive: true });
 
 const COLOR = {
   transparent: [0, 0, 0, 0],
-  black: [8, 13, 18, 255],
-  dark: [18, 25, 33, 255],
-  grid: [31, 44, 55, 255],
-  white: [248, 250, 252, 255],
-  shadow: [5, 8, 12, 180],
-  player: [34, 197, 94, 255],
-  playerDark: [20, 83, 45, 255],
-  normal: [245, 196, 81, 255],
-  fast: [107, 213, 255, 255],
-  armor: [255, 138, 61, 255],
-  armorDark: [126, 61, 38, 255],
-  brick: [180, 107, 60, 255],
-  brickDark: [91, 49, 35, 255],
-  steel: [148, 163, 184, 255],
-  steelDark: [71, 85, 105, 255],
-  grass: [49, 95, 70, 220],
-  grassLight: [89, 166, 111, 230],
-  water: [28, 79, 122, 245],
-  waterLight: [107, 213, 255, 230],
-  ice: [199, 240, 255, 240],
-  iceLine: [101, 181, 217, 255],
-  base: [248, 250, 252, 255],
-  baseCore: [245, 196, 81, 255],
-  red: [255, 107, 107, 255],
-  orange: [255, 184, 77, 255],
-  yellow: [255, 223, 93, 255],
-  magenta: [255, 97, 216, 255],
-  cyan: [107, 213, 255, 255],
+  black: [0, 0, 0, 255],
+  white: [236, 238, 236, 255],
+  lightGray: [188, 188, 188, 255],
+  gray: [116, 116, 116, 255],
+  darkGray: [48, 48, 48, 255],
+  player: [248, 216, 72, 255],
+  playerDark: [128, 96, 0, 255],
+  normal: [188, 188, 188, 255],
+  normalDark: [72, 72, 72, 255],
+  fast: [128, 208, 120, 255],
+  fastDark: [32, 112, 48, 255],
+  power: [232, 88, 32, 255],
+  powerDark: [120, 40, 24, 255],
+  armor: [176, 128, 64, 255],
+  armorDark: [72, 64, 32, 255],
+  brick: [184, 88, 40, 255],
+  brickLight: [232, 136, 56, 255],
+  brickDark: [88, 40, 24, 255],
+  steel: [176, 184, 184, 255],
+  steelLight: [236, 238, 236, 255],
+  steelDark: [72, 80, 88, 255],
+  grass: [48, 128, 64, 245],
+  grassLight: [120, 184, 72, 245],
+  grassDark: [24, 72, 40, 245],
+  water: [24, 72, 160, 255],
+  waterDark: [8, 32, 88, 255],
+  waterLight: [112, 184, 248, 255],
+  ice: [184, 224, 232, 255],
+  iceLine: [80, 152, 200, 255],
+  base: [236, 238, 236, 255],
+  baseCore: [248, 216, 72, 255],
+  red: [216, 40, 0, 255],
+  orange: [248, 144, 32, 255],
+  yellow: [248, 216, 72, 255],
+  magenta: [216, 80, 184, 255],
+  cyan: [112, 184, 248, 255],
 };
 
 function createCanvas(width, height) {
@@ -98,47 +106,247 @@ function frameOrigin(index, columns = 4) {
   return { x: (index % columns) * 32, y: Math.floor(index / columns) * 32 };
 }
 
-function drawTank(canvas, index, direction, body, dark, accent = COLOR.white) {
-  const { x, y } = frameOrigin(index, 4);
-  rect(canvas, x + 6, y + 7, 20, 19, COLOR.shadow);
+const TANK_PROFILES = {
+  player: {
+    body: COLOR.player,
+    dark: COLOR.playerDark,
+    track: COLOR.darkGray,
+    light: COLOR.white,
+    bodyW: 12,
+    bodyH: 16,
+    trackW: 5,
+    trackH: 23,
+    turret: 8,
+    barrelW: 4,
+    barrelL: 12,
+    plate: "single",
+  },
+  player2: {
+    body: COLOR.player,
+    dark: COLOR.playerDark,
+    track: COLOR.darkGray,
+    light: COLOR.white,
+    bodyW: 13,
+    bodyH: 17,
+    trackW: 5,
+    trackH: 24,
+    turret: 9,
+    barrelW: 4,
+    barrelL: 14,
+    plate: "stripe",
+  },
+  player3: {
+    body: COLOR.player,
+    dark: COLOR.playerDark,
+    track: COLOR.darkGray,
+    light: COLOR.white,
+    bodyW: 14,
+    bodyH: 18,
+    trackW: 6,
+    trackH: 24,
+    turret: 10,
+    barrelW: 5,
+    barrelL: 14,
+    plate: "cannon",
+  },
+  player4: {
+    body: COLOR.yellow,
+    dark: COLOR.playerDark,
+    track: COLOR.darkGray,
+    light: COLOR.steelLight,
+    bodyW: 16,
+    bodyH: 18,
+    trackW: 6,
+    trackH: 25,
+    turret: 10,
+    barrelW: 5,
+    barrelL: 16,
+    plate: "armor",
+  },
+  normal: {
+    body: COLOR.normal,
+    dark: COLOR.normalDark,
+    track: COLOR.darkGray,
+    light: COLOR.white,
+    bodyW: 12,
+    bodyH: 15,
+    trackW: 5,
+    trackH: 22,
+    turret: 8,
+    barrelW: 3,
+    barrelL: 10,
+    plate: "single",
+  },
+  fast: {
+    body: COLOR.fast,
+    dark: COLOR.fastDark,
+    track: COLOR.darkGray,
+    light: COLOR.white,
+    bodyW: 9,
+    bodyH: 18,
+    trackW: 4,
+    trackH: 25,
+    turret: 6,
+    barrelW: 3,
+    barrelL: 12,
+    plate: "stripe",
+  },
+  power: {
+    body: COLOR.power,
+    dark: COLOR.powerDark,
+    track: COLOR.darkGray,
+    light: COLOR.yellow,
+    bodyW: 14,
+    bodyH: 16,
+    trackW: 5,
+    trackH: 23,
+    turret: 10,
+    barrelW: 5,
+    barrelL: 14,
+    plate: "cannon",
+  },
+  armor: {
+    body: COLOR.armor,
+    dark: COLOR.armorDark,
+    track: COLOR.darkGray,
+    light: COLOR.steelLight,
+    bodyW: 16,
+    bodyH: 18,
+    trackW: 6,
+    trackH: 24,
+    turret: 10,
+    barrelW: 4,
+    barrelL: 10,
+    plate: "armor",
+  },
+  life: {
+    body: COLOR.white,
+    dark: COLOR.steelDark,
+    track: COLOR.darkGray,
+    light: COLOR.player,
+    bodyW: 12,
+    bodyH: 15,
+    trackW: 5,
+    trackH: 22,
+    turret: 8,
+    barrelW: 3,
+    barrelL: 10,
+    plate: "single",
+  },
+};
 
+function drawTank(canvas, index, direction, profile) {
+  const { x, y } = frameOrigin(index, 4);
+  drawTankAt(canvas, x, y, direction, profile);
+}
+
+function drawTankAt(canvas, x, y, direction, profile) {
   if (direction === "up" || direction === "down") {
-    rect(canvas, x + 4, y + 5, 5, 23, dark);
-    rect(canvas, x + 23, y + 5, 5, 23, dark);
-    rect(canvas, x + 9, y + 7, 14, 19, body);
-    rect(canvas, x + 12, y + 10, 8, 11, dark);
-    rect(canvas, x + 14, y + (direction === "up" ? 1 : 20), 4, 11, body);
-    rect(canvas, x + 13, y + (direction === "up" ? 1 : 27), 6, 3, accent);
-    for (let yy = 7; yy <= 25; yy += 6) {
-      rect(canvas, x + 5, y + yy, 3, 2, COLOR.black);
-      rect(canvas, x + 24, y + yy, 3, 2, COLOR.black);
-    }
-  } else {
-    rect(canvas, x + 5, y + 4, 23, 5, dark);
-    rect(canvas, x + 5, y + 23, 23, 5, dark);
-    rect(canvas, x + 7, y + 9, 19, 14, body);
-    rect(canvas, x + 11, y + 12, 11, 8, dark);
-    rect(canvas, x + (direction === "left" ? 1 : 20), y + 14, 11, 4, body);
-    rect(canvas, x + (direction === "left" ? 1 : 27), y + 13, 3, 6, accent);
-    for (let xx = 7; xx <= 25; xx += 6) {
-      rect(canvas, x + xx, y + 5, 2, 3, COLOR.black);
-      rect(canvas, x + xx, y + 24, 2, 3, COLOR.black);
-    }
+    drawTankVertical(canvas, x, y, direction, profile);
+    return;
   }
+
+  drawTankHorizontal(canvas, x, y, direction, profile);
+}
+
+function drawTankVertical(canvas, x, y, direction, profile) {
+  const leftTrack = 4;
+  const rightTrack = 28 - profile.trackW;
+  const trackY = Math.round(16 - profile.trackH / 2);
+  const bodyX = Math.round(16 - profile.bodyW / 2);
+  const bodyY = Math.round(16 - profile.bodyH / 2) + 2;
+  const turret = Math.round(16 - profile.turret / 2);
+  const barrelX = Math.round(16 - profile.barrelW / 2);
+  const barrelY = direction === "up" ? 2 : 30 - profile.barrelL;
+
+  rect(canvas, x + leftTrack - 1, y + trackY - 1, profile.trackW + 2, profile.trackH + 2, COLOR.black);
+  rect(canvas, x + rightTrack - 1, y + trackY - 1, profile.trackW + 2, profile.trackH + 2, COLOR.black);
+  rect(canvas, x + leftTrack, y + trackY, profile.trackW, profile.trackH, profile.track);
+  rect(canvas, x + rightTrack, y + trackY, profile.trackW, profile.trackH, profile.track);
+
+  for (let yy = trackY + 2; yy < trackY + profile.trackH - 2; yy += 5) {
+    rect(canvas, x + leftTrack + 1, y + yy, profile.trackW - 2, 2, profile.light);
+    rect(canvas, x + rightTrack + 1, y + yy, profile.trackW - 2, 2, profile.light);
+  }
+
+  rect(canvas, x + bodyX - 1, y + bodyY - 1, profile.bodyW + 2, profile.bodyH + 2, COLOR.black);
+  rect(canvas, x + bodyX, y + bodyY, profile.bodyW, profile.bodyH, profile.body);
+  rect(canvas, x + turret - 1, y + turret + 1, profile.turret + 2, profile.turret + 2, COLOR.black);
+  rect(canvas, x + turret, y + turret + 2, profile.turret, profile.turret, profile.dark);
+  rect(canvas, x + barrelX - 1, y + barrelY - 1, profile.barrelW + 2, profile.barrelL + 2, COLOR.black);
+  rect(canvas, x + barrelX, y + barrelY, profile.barrelW, profile.barrelL, profile.body);
+
+  drawTankPlate(canvas, x, y, profile);
+}
+
+function drawTankHorizontal(canvas, x, y, direction, profile) {
+  const topTrack = 4;
+  const bottomTrack = 28 - profile.trackW;
+  const trackX = Math.round(16 - profile.trackH / 2);
+  const bodyX = Math.round(16 - profile.bodyH / 2) - 2;
+  const bodyY = Math.round(16 - profile.bodyW / 2);
+  const turret = Math.round(16 - profile.turret / 2);
+  const barrelX = direction === "left" ? 2 : 30 - profile.barrelL;
+  const barrelY = Math.round(16 - profile.barrelW / 2);
+
+  rect(canvas, x + trackX - 1, y + topTrack - 1, profile.trackH + 2, profile.trackW + 2, COLOR.black);
+  rect(canvas, x + trackX - 1, y + bottomTrack - 1, profile.trackH + 2, profile.trackW + 2, COLOR.black);
+  rect(canvas, x + trackX, y + topTrack, profile.trackH, profile.trackW, profile.track);
+  rect(canvas, x + trackX, y + bottomTrack, profile.trackH, profile.trackW, profile.track);
+
+  for (let xx = trackX + 2; xx < trackX + profile.trackH - 2; xx += 5) {
+    rect(canvas, x + xx, y + topTrack + 1, 2, profile.trackW - 2, profile.light);
+    rect(canvas, x + xx, y + bottomTrack + 1, 2, profile.trackW - 2, profile.light);
+  }
+
+  rect(canvas, x + bodyX - 1, y + bodyY - 1, profile.bodyH + 2, profile.bodyW + 2, COLOR.black);
+  rect(canvas, x + bodyX, y + bodyY, profile.bodyH, profile.bodyW, profile.body);
+  rect(canvas, x + turret - 1, y + turret - 1, profile.turret + 2, profile.turret + 2, COLOR.black);
+  rect(canvas, x + turret, y + turret, profile.turret, profile.turret, profile.dark);
+  rect(canvas, x + barrelX - 1, y + barrelY - 1, profile.barrelL + 2, profile.barrelW + 2, COLOR.black);
+  rect(canvas, x + barrelX, y + barrelY, profile.barrelL, profile.barrelW, profile.body);
+
+  drawTankPlate(canvas, x, y, profile);
+}
+
+function drawTankPlate(canvas, x, y, profile) {
+  if (profile.plate === "stripe") {
+    rect(canvas, x + 14, y + 9, 4, 14, profile.light);
+    return;
+  }
+
+  if (profile.plate === "cannon") {
+    rect(canvas, x + 12, y + 12, 8, 8, profile.light);
+    rect(canvas, x + 14, y + 14, 4, 4, profile.dark);
+    return;
+  }
+
+  if (profile.plate === "armor") {
+    rect(canvas, x + 10, y + 9, 12, 3, profile.light);
+    rect(canvas, x + 10, y + 15, 12, 3, profile.light);
+    rect(canvas, x + 10, y + 21, 12, 3, profile.light);
+    return;
+  }
+
+  rect(canvas, x + 14, y + 14, 4, 4, profile.light);
 }
 
 function makeTanks() {
-  const canvas = createCanvas(128, 128);
+  const canvas = createCanvas(128, 256);
   const rows = [
-    [COLOR.player, COLOR.playerDark],
-    [COLOR.normal, COLOR.brickDark],
-    [COLOR.fast, COLOR.steelDark],
-    [COLOR.armor, COLOR.armorDark],
+    TANK_PROFILES.player,
+    TANK_PROFILES.player2,
+    TANK_PROFILES.player3,
+    TANK_PROFILES.player4,
+    TANK_PROFILES.normal,
+    TANK_PROFILES.fast,
+    TANK_PROFILES.power,
+    TANK_PROFILES.armor,
   ];
   const directions = ["up", "right", "down", "left"];
 
-  rows.forEach(([body, dark], row) => {
-    directions.forEach((direction, col) => drawTank(canvas, row * 4 + col, direction, body, dark));
+  rows.forEach((profile, row) => {
+    directions.forEach((direction, col) => drawTank(canvas, row * 4 + col, direction, profile));
   });
 
   return canvas;
@@ -146,54 +354,73 @@ function makeTanks() {
 
 function makeTerrain() {
   const canvas = createCanvas(256, 32);
-  for (let x = 0; x < 32; x += 4) {
-    for (let y = 0; y < 32; y += 4) {
-      if ((x + y) % 8 === 0) rect(canvas, x + 1, y + 1, 1, 1, COLOR.grid);
-    }
-  }
 
   const brickX = 32;
-  rect(canvas, brickX + 2, 2, 28, 28, COLOR.brickDark);
-  for (let by = 3; by < 28; by += 7) {
-    for (let bx = 3 + ((by / 7) % 2) * 6; bx < 28; bx += 12) {
-      rect(canvas, brickX + bx, by, 10, 5, COLOR.brick);
+  for (let quadrantY = 0; quadrantY < 2; quadrantY += 1) {
+    for (let quadrantX = 0; quadrantX < 2; quadrantX += 1) {
+      const ox = brickX + quadrantX * 16;
+      const oy = quadrantY * 16;
+      rect(canvas, ox + 1, oy + 1, 14, 14, COLOR.brickDark);
+      rect(canvas, ox + 2, oy + 2, 6, 5, COLOR.brickLight);
+      rect(canvas, ox + 9, oy + 2, 5, 5, COLOR.brick);
+      rect(canvas, ox + 2, oy + 8, 12, 5, COLOR.brick);
+      rect(canvas, ox + 7, oy + 8, 1, 5, COLOR.brickDark);
     }
   }
 
   const steelX = 64;
-  rect(canvas, steelX + 3, 3, 26, 26, COLOR.steel);
-  rect(canvas, steelX + 7, 7, 18, 18, COLOR.steelDark);
-  rect(canvas, steelX + 6, 6, 5, 5, COLOR.white);
-  rect(canvas, steelX + 21, 21, 5, 5, COLOR.grid);
+  for (let quadrantY = 0; quadrantY < 2; quadrantY += 1) {
+    for (let quadrantX = 0; quadrantX < 2; quadrantX += 1) {
+      const ox = steelX + quadrantX * 16;
+      const oy = quadrantY * 16;
+      rect(canvas, ox + 1, oy + 1, 14, 14, COLOR.steelDark);
+      rect(canvas, ox + 3, oy + 3, 10, 10, COLOR.steel);
+      rect(canvas, ox + 4, oy + 4, 3, 3, COLOR.steelLight);
+      rect(canvas, ox + 10, oy + 10, 2, 2, COLOR.darkGray);
+    }
+  }
 
   const grassX = 96;
-  rect(canvas, grassX + 1, 1, 30, 30, COLOR.grass);
-  for (let i = 0; i < 8; i += 1) {
-    rect(canvas, grassX + 4 + i * 3, 3 + (i % 3), 2, 25 - (i % 4), i % 2 ? COLOR.grassLight : COLOR.grass);
+  for (let i = 0; i < 18; i += 1) {
+    const bladeX = grassX + 2 + (i * 7) % 28;
+    const bladeY = 2 + (i * 5) % 26;
+    rect(canvas, bladeX, bladeY, 4, 12, i % 3 === 0 ? COLOR.grassLight : COLOR.grass);
+    rect(canvas, bladeX + 2, bladeY + 4, 4, 10, COLOR.grassDark);
   }
 
   const waterX = 128;
+  rect(canvas, waterX, 0, 32, 32, COLOR.waterDark);
   rect(canvas, waterX + 2, 2, 28, 28, COLOR.water);
-  line(canvas, waterX + 5, 12, waterX + 15, 8, COLOR.waterLight);
-  line(canvas, waterX + 15, 20, waterX + 27, 15, COLOR.waterLight);
-  line(canvas, waterX + 3, 25, waterX + 13, 22, COLOR.cyan);
+  for (let y = 8; y <= 24; y += 8) {
+    line(canvas, waterX + 4, y, waterX + 10, y - 3, COLOR.waterLight);
+    line(canvas, waterX + 10, y - 3, waterX + 16, y, COLOR.waterLight);
+    line(canvas, waterX + 18, y + 1, waterX + 25, y - 2, COLOR.cyan);
+  }
 
   const iceX = 160;
-  rect(canvas, iceX + 2, 2, 28, 28, COLOR.ice);
-  line(canvas, iceX + 6, 24, iceX + 24, 6, COLOR.iceLine);
-  line(canvas, iceX + 8, 9, iceX + 19, 4, COLOR.white);
+  rect(canvas, iceX, 0, 32, 32, COLOR.ice);
+  line(canvas, iceX + 3, 25, iceX + 25, 3, COLOR.iceLine);
+  line(canvas, iceX + 9, 28, iceX + 28, 9, COLOR.white);
+  line(canvas, iceX + 5, 8, iceX + 15, 2, COLOR.white);
+  line(canvas, iceX + 17, 29, iceX + 29, 17, COLOR.iceLine);
 
   const baseX = 192;
-  rect(canvas, baseX + 7, 8, 18, 19, COLOR.base);
-  rect(canvas, baseX + 10, 12, 12, 12, COLOR.baseCore);
-  rect(canvas, baseX + 14, 6, 4, 6, COLOR.base);
-  rect(canvas, baseX + 12, 15, 8, 5, COLOR.steelDark);
+  rect(canvas, baseX + 8, 18, 16, 9, COLOR.base);
+  rect(canvas, baseX + 11, 12, 10, 8, COLOR.baseCore);
+  rect(canvas, baseX + 15, 7, 3, 7, COLOR.base);
+  rect(canvas, baseX + 7, 14, 6, 5, COLOR.base);
+  rect(canvas, baseX + 19, 14, 6, 5, COLOR.base);
+  rect(canvas, baseX + 10, 21, 12, 3, COLOR.steelDark);
+  rect(canvas, baseX + 14, 15, 4, 3, COLOR.black);
 
   const brokenX = 224;
-  rect(canvas, brokenX + 8, 10, 16, 16, COLOR.brickDark);
-  rect(canvas, brokenX + 11, 13, 5, 5, COLOR.red);
-  line(canvas, brokenX + 6, 25, brokenX + 25, 6, COLOR.black);
-  line(canvas, brokenX + 8, 8, brokenX + 27, 27, COLOR.black);
+  rect(canvas, brokenX + 6, 18, 20, 8, COLOR.brickDark);
+  rect(canvas, brokenX + 9, 10, 6, 8, COLOR.base);
+  rect(canvas, brokenX + 17, 12, 6, 7, COLOR.baseCore);
+  rect(canvas, brokenX + 7, 25, 5, 3, COLOR.brickLight);
+  rect(canvas, brokenX + 21, 23, 6, 4, COLOR.brick);
+  line(canvas, brokenX + 5, 7, brokenX + 26, 28, COLOR.black);
+  line(canvas, brokenX + 6, 27, brokenX + 27, 8, COLOR.black);
 
   return canvas;
 }
@@ -238,7 +465,7 @@ function makePowerups() {
   rect(canvas, 108, 18, 8, 8, COLOR.brickDark);
   rect(canvas, 137, 8, 14, 17, COLOR.player);
   rect(canvas, 132, 12, 24, 8, COLOR.playerDark);
-  drawTank(canvas, 5, "up", COLOR.white, COLOR.steelDark, COLOR.player);
+  drawTankAt(canvas, 160, 0, "up", TANK_PROFILES.life);
   return canvas;
 }
 
@@ -321,4 +548,3 @@ writePng("tanks.png", makeTanks());
 writePng("terrain.png", makeTerrain());
 writePng("effects.png", makeEffects());
 writePng("powerups.png", makePowerups());
-

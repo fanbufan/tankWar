@@ -1,6 +1,6 @@
 export type Direction = "up" | "down" | "left" | "right";
 export type TileType = "empty" | "brick" | "steel" | "grass" | "water" | "ice" | "base" | "baseDestroyed";
-export type EnemyType = "normal" | "fast" | "armor";
+export type EnemyType = "normal" | "fast" | "power" | "armor";
 export type PowerUpType = "star" | "bomb" | "clock" | "shovel" | "helmet" | "tank";
 export type ActorOwner = "player" | "enemy";
 
@@ -65,4 +65,3 @@ export interface GameState {
   enemyFrozenUntil: number;
   nextEnemySpawnIndex: number;
 }
-

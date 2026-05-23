@@ -10,7 +10,7 @@ export function createGame(parent: string): Phaser.Game {
     parent,
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
-    backgroundColor: "#101418",
+    backgroundColor: "#000000",
     pixelArt: true,
     roundPixels: true,
     scale: {
@@ -20,4 +20,3 @@ export function createGame(parent: string): Phaser.Game {
     scene: [MenuScene, GameScene, ResultScene],
   });
 }
-

@@ -1,6 +1,11 @@
 import Phaser from "phaser";
-import { LEVELS } from "../../levels";
 import { GAME_HEIGHT, GAME_WIDTH } from "../config";
+import type { RuntimeStageStatsSnapshot } from "../runtime/types";
+import type { EnemyType } from "../types";
+
+const BLACK = 0x000000;
+const RED = 0xd82800;
+const YELLOW = 0xf8d878;
 
 type ResultOutcome = "level-complete" | "victory" | "defeat";
 
@@ -8,6 +13,7 @@ interface ResultSceneData {
   outcome: ResultOutcome;
   levelIndex: number;
   score: number;
+  stageStats?: RuntimeStageStatsSnapshot;
 }
 
 export class ResultScene extends Phaser.Scene {
@@ -22,41 +28,48 @@ export class ResultScene extends Phaser.Scene {
       outcome: data.outcome ?? "defeat",
       levelIndex: data.levelIndex ?? 0,
       score: data.score ?? 0,
+      stageStats: data.stageStats,
     };
   }
 
   public create(): void {
     const graphics = this.add.graphics();
-    graphics.fillStyle(0x101418, 1);
+    graphics.fillStyle(BLACK, 1);
     graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    graphics.fillStyle(0x17212b, 1);
-    graphics.fillRect(42, 48, GAME_WIDTH - 84, GAME_HEIGHT - 96);
-    graphics.lineStyle(3, this.dataModel.outcome === "defeat" ? 0xff6b6b : 0x6bd5ff, 1);
-    graphics.strokeRect(42, 48, GAME_WIDTH - 84, GAME_HEIGHT - 96);
 
     const title = this.getTitle();
     const prompt = this.getPrompt();
 
     this.add.text(GAME_WIDTH / 2, 128, title, {
       fontFamily: '"Courier New", monospace',
-      fontSize: "34px",
-      color: this.dataModel.outcome === "defeat" ? "#ffb1b1" : "#f8fafc",
-      stroke: "#0a0f14",
-      strokeThickness: 6,
+      fontSize: "24px",
+      color: this.dataModel.outcome === "defeat" ? "#d82800" : "#fcfcfc",
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, 194, `SCORE ${this.dataModel.score}`, {
+    this.add.text(GAME_WIDTH / 2, 196, "I-PLAYER", {
       fontFamily: '"Courier New", monospace',
-      fontSize: "22px",
-      color: "#f5c451",
+      fontSize: "18px",
+      color: "#fcfcfc",
     }).setOrigin(0.5);
 
-    this.add.text(GAME_WIDTH / 2, 264, prompt, {
+    this.add.text(GAME_WIDTH / 2, 226, `${this.dataModel.score.toString().padStart(6, "0")} PTS`, {
+      fontFamily: '"Courier New", monospace',
+      fontSize: "18px",
+      color: "#f8d878",
+    }).setOrigin(0.5);
+
+    this.drawStageStats();
+
+    this.add.text(GAME_WIDTH / 2, this.dataModel.stageStats && this.dataModel.outcome !== "defeat" ? 356 : 312, prompt, {
       fontFamily: '"Courier New", monospace',
       fontSize: "16px",
-      color: "#d7e2ea",
+      color: "#fcfcfc",
       align: "center",
     }).setOrigin(0.5);
+
+    if (this.dataModel.outcome === "defeat") {
+      this.drawGameOverMarker(graphics);
+    }
 
     this.input.keyboard?.on("keydown-ENTER", () => {
       if (this.dataModel.outcome === "level-complete") {
@@ -78,22 +91,60 @@ export class ResultScene extends Phaser.Scene {
     }
 
     if (this.dataModel.outcome === "level-complete") {
-      return `${LEVELS[this.dataModel.levelIndex].name} CLEAR`;
+      return `STAGE ${this.dataModel.levelIndex + 1} CLEAR`;
     }
 
-    return "BASE LOST";
+    return "GAME OVER";
   }
 
   private getPrompt(): string {
     if (this.dataModel.outcome === "level-complete") {
-      return "ENTER 进入下一关";
+      return "PUSH ENTER";
     }
 
     if (this.dataModel.outcome === "victory") {
-      return "ENTER 返回菜单 · R 重新挑战";
+      return "PUSH ENTER";
     }
 
-    return "ENTER 返回菜单 · R 重试本关";
+    return "PUSH ENTER";
+  }
+
+  private drawStageStats(): void {
+    if (!this.dataModel.stageStats || this.dataModel.outcome === "defeat") {
+      return;
+    }
+
+    const enemyTypes: EnemyType[] = ["normal", "fast", "power", "armor"];
+    const labels: Record<EnemyType, string> = {
+      normal: "BASIC",
+      fast: "FAST",
+      power: "POWER",
+      armor: "ARMOR",
+    };
+
+    enemyTypes.forEach((type, index) => {
+      const y = 254 + index * 18;
+      const count = this.dataModel.stageStats?.destroyedEnemies[type] ?? 0;
+      const score = this.dataModel.stageStats?.enemyScore[type] ?? 0;
+
+      this.add.text(GAME_WIDTH / 2 - 118, y, labels[type], {
+        fontFamily: '"Courier New", monospace',
+        fontSize: "13px",
+        color: "#fcfcfc",
+      }).setOrigin(0, 0.5);
+
+      this.add.text(GAME_WIDTH / 2 + 14, y, `${count.toString().padStart(2, "0")}  ${score.toString().padStart(4, "0")}`, {
+        fontFamily: '"Courier New", monospace',
+        fontSize: "13px",
+        color: "#f8d878",
+      }).setOrigin(0, 0.5);
+    });
+  }
+
+  private drawGameOverMarker(graphics: Phaser.GameObjects.Graphics): void {
+    graphics.fillStyle(RED, 1);
+    graphics.fillRect(GAME_WIDTH / 2 - 54, 268, 108, 4);
+    graphics.fillStyle(YELLOW, 1);
+    graphics.fillRect(GAME_WIDTH / 2 - 54, 276, 108, 4);
   }
 }
-

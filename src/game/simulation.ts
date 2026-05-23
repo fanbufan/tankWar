@@ -60,7 +60,7 @@ export function spawnEnemy(state: GameState): void {
     tile: { ...spawnPoint },
     direction: "down",
     lives: 1,
-    armor: type === "armor" ? 3 : 1,
+    armor: CONFIG.enemyTypes[type].health,
     powerLevel: 1,
     cooldownUntil: state.elapsedMs + 700,
     invulnerableUntil: state.elapsedMs + 600,
@@ -99,7 +99,7 @@ export function tickGame(state: GameState, deltaMs: number): void {
 
 export function applyPowerUp(state: GameState, powerUp: PowerUpType): void {
   if (powerUp === "star") {
-    state.player.powerLevel = Math.min(3, state.player.powerLevel + 1);
+    state.player.powerLevel = Math.min(CONFIG.maxPlayerPowerLevel, state.player.powerLevel + 1);
     return;
   }
 
